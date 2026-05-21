@@ -9,6 +9,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -36,4 +37,8 @@ public class Reparacion {
 
     @Column(nullable = false, length = 30)
     private String estado = "Pendiente"; // Valor inicial por defecto según las reglas de negocio
+
+    @Column(name="costo_total",precision=10,scale=2)
+    private BigDecimal costoTotal;
+
 }
