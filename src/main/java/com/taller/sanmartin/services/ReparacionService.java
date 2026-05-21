@@ -3,9 +3,11 @@ package com.taller.sanmartin.services;
 import com.taller.sanmartin.models.Reparacion;
 import com.taller.sanmartin.repositories.ReparacionRepository;
 import com.taller.sanmartin.repositories.VehiculoRepository;
+import com.taller.sanmartin.repositories.ServicioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -15,14 +17,16 @@ public class ReparacionService {
 
     private final ReparacionRepository reparacionRepository;
     private final VehiculoRepository vehiculoRepository;
+    private final ServicioRepository servicioRepository;
 
     // Lista estática de estados permitidos por las reglas de negocio
     private static final List<String> ESTADOS_VALIDOS = Arrays.asList("PENDIENTE", "EN PROCESO", "FINALIZADO");
 
     // Inyección de dependencias por constructor
-    public ReparacionService(ReparacionRepository reparacionRepository, VehiculoRepository vehiculoRepository) {
+    public ReparacionService(ReparacionRepository reparacionRepository, VehiculoRepository vehiculoRepository, ServicioRepository servicioRepository) {
         this.reparacionRepository = reparacionRepository;
         this.vehiculoRepository = vehiculoRepository;
+        this.servicioRepository = servicioRepository;
     }
 
     // 1. Obtener todas las reparaciones (Historial global)
@@ -93,10 +97,20 @@ public class ReparacionService {
 
         return reparacionRepository.findById(id)
                 .map(reparacionExistente -> {
-                    // Mantenemos las minúsculas/mayúsculas según el formato visual preferido (Ej: "En Proceso")
+                    // Mantenemos las minúsculas/mayúsculas según el formato visual preferido
                     if (estadoFormateado.equals("PENDIENTE")) reparacionExistente.setEstado("Pendiente");
                     if (estadoFormateado.equals("EN PROCESO")) reparacionExistente.setEstado("En Proceso");
-                    if (estadoFormateado.equals("FINALIZADO")) reparacionExistente.setEstado("Finalizado");
+
+                    if (estadoFormateado.equals("FINALIZADO")) {
+                        reparacionExistente.setEstado("Finalizado");
+
+                        // Calculamos el costo total sumando los precios base de los servicios cargados
+                        BigDecimal totalFactura = servicioRepository.findAll().stream()
+                                .map(servicio -> servicio.getPrecioBase() != null ? servicio.getPrecioBase() : BigDecimal.ZERO)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                        reparacionExistente.setCostoTotal(totalFactura);
+                    }
 
                     return reparacionRepository.save(reparacionExistente);
                 })
